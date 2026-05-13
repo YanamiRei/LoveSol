@@ -72,9 +72,53 @@ function love.load()
 	Foundation = { table.remove(Deck) }
 
 	SetupDrawPositions()
+	TopCardsPosition = GetTopCardsPosition()
 end
 
-function love.update() end
+function love.update()
+	lastMouseState = currentMouseState
+	currentMouseState = love.mouse.isDown(1)
+	if lastMouseState and not currentMouseState then
+		local mx, my = love.mouse.getPosition()
+		Click(mx, my)
+	end
+end
+
+function Click(x, y)
+	for i, posn in ipairs(TopCardsPosition) do
+		if
+			x > posn.x
+			and y > posn.y
+			and x < posn.x + (CARD_DIMENSIONS.x * Scale)
+			and y < posn.y + (CARD_DIMENSIONS.y * Scale)
+		then
+			print("clicking at " .. i)
+			if i == 8 then
+				DrawFromStock()
+			else
+				TryColumn(i)
+			end
+		end
+	end
+end
+
+function DrawFromStock()
+	if #Deck == 0 then
+		return
+	end
+	table.insert(Foundation, table.remove(Deck))
+end
+
+function TryColumn(columnNo) end
+
+function GetTopCardsPosition()
+	local topCardsPosition = {}
+	for i = 1, 7 do
+		table.insert(topCardsPosition, DrawPositions[i][#Tableu[i]])
+	end
+	table.insert(topCardsPosition, DrawPositions["Stock"])
+	return topCardsPosition
+end
 
 function love.draw()
 	DrawTableu(Tableu)
@@ -87,6 +131,7 @@ function love.resize()
 		y = CARD_DIMENSIONS.y / CARD_SPRITE_DIMENSIONS.y * Scale,
 	}
 	SetupDrawPositions()
+	TopCardsPosition = GetTopCardsPosition()
 end
 
 function SetupDrawPositions()
@@ -137,7 +182,8 @@ end
 
 function DrawBottom(foundation)
 	-- Stock
-	local cardBackSprite = love.graphics.newImage("Sprites/Backs/back_0.png")
+	local StockPath = #Deck ~= 0 and "Sprites/Backs/back_0.png" or "Sprites/Backs/back_x.png"
+	local cardBackSprite = love.graphics.newImage(StockPath)
 	love.graphics.push()
 	love.graphics.scale(CardSpriteScale.x, CardSpriteScale.y)
 	love.graphics.draw(
