@@ -2,7 +2,7 @@
 
 MARGIN = 40
 CARD_DIMENSIONS = { x = 162, y = 204 }
-CARD_GAP = { x = 30, y = 20 }
+CARD_GAP = { x = 30, y = 40 }
 
 CARD_SPRITE_DIMENSIONS = { x = 27, y = 34 }
 
@@ -69,6 +69,7 @@ function love.load()
 
 	Deck = GenrateDeck()
 	Tableu = DistributeDeck(Deck)
+	Foundation = { table.remove(Deck) }
 
 	SetupDrawPositions()
 end
@@ -77,6 +78,7 @@ function love.update() end
 
 function love.draw()
 	DrawTableu(Tableu)
+	DrawBottom(Foundation)
 end
 
 function love.resize()
@@ -109,7 +111,7 @@ function SetupDrawPositions()
 		end
 	end
 
-	DrawPositions.stock = { x = MARGIN * Scale, y = Wh - ((CARD_DIMENSIONS.y + MARGIN) * Scale) }
+	DrawPositions.Stock = { x = MARGIN * Scale, y = Wh - ((CARD_DIMENSIONS.y + MARGIN) * Scale) }
 	DrawPositions.Foundation =
 		{ x = (MARGIN + CARD_DIMENSIONS.x + CARD_GAP.x) * Scale, y = Wh - ((CARD_DIMENSIONS.y + MARGIN) * Scale) }
 end
@@ -130,5 +132,25 @@ function DrawTableu(tableu)
 			local posn = DrawPositions[j][i]
 			DrawCard(posn.x, posn.y, card)
 		end
+	end
+end
+
+function DrawBottom(foundation)
+	-- Stock
+	local cardBackSprite = love.graphics.newImage("Sprites/Backs/back_0.png")
+	love.graphics.push()
+	love.graphics.scale(CardSpriteScale.x, CardSpriteScale.y)
+	love.graphics.draw(
+		cardBackSprite,
+		DrawPositions.Stock.x / CardSpriteScale.x,
+		DrawPositions.Stock.y / CardSpriteScale.y
+	)
+	love.graphics.pop()
+
+	-- Foundation
+	local y = DrawPositions.Foundation.y
+	for i, card in ipairs(Foundation) do
+		local x = DrawPositions.Foundation.x + ((i - 1) * CARD_GAP.x)
+		DrawCard(x, y, card)
 	end
 end
