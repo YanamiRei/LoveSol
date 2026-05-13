@@ -1,10 +1,19 @@
 -- GOLF SOLITAIRE
 
-MARGIN = 30
-CARD_DIMENSIONS = { x = 60, y = 100 }
-CARD_GAP = { x = 20, y = 10 }
+MARGIN = 40
+CARD_DIMENSIONS = { x = 162, y = 204 }
+CARD_GAP = { x = 30, y = 20 }
+
+CARD_SPRITE_DIMENSIONS = { x = 27, y = 34 }
+
+SUIT_EXPANSIONS = { C = "Clubs", S = "Spades", H = "Hearts", D = "Diamonds" }
 
 Scale = 1
+
+CardSpriteScale = {
+	x = CARD_DIMENSIONS.x / CARD_SPRITE_DIMENSIONS.x * Scale,
+	y = CARD_DIMENSIONS.y / CARD_SPRITE_DIMENSIONS.y * Scale,
+}
 
 function Shuffle(tbl)
 	math.randomseed(os.time())
@@ -46,6 +55,7 @@ end
 
 function love.load()
 	Font = love.graphics.newFont(16)
+	love.graphics.setDefaultFilter("nearest", "nearest")
 
 	Deck = GenrateDeck()
 	Tableu = DistributeDeck(Deck)
@@ -60,6 +70,10 @@ function love.draw()
 end
 
 function love.resize()
+	CardSpriteScale = {
+		x = CARD_DIMENSIONS.x / CARD_SPRITE_DIMENSIONS.x * Scale,
+		y = CARD_DIMENSIONS.y / CARD_SPRITE_DIMENSIONS.y * Scale,
+	}
 	SetupDrawPositions()
 end
 
@@ -82,7 +96,7 @@ function SetupDrawPositions()
 	for i = 1, 5 do
 		for j = 1, 7 do
 			local posn = {}
-			posn.x = (MARGIN + ((j - 1) * (CARD_DIMENSIONS.x + CARD_GAP.x)) * Scale)
+			posn.x = (MARGIN + ((j - 1) * (CARD_DIMENSIONS.x + CARD_GAP.x))) * Scale
 			posn.y = (MARGIN + ((i - 1) * CARD_GAP.y)) * Scale
 			table.insert(DrawPositions[j], posn)
 		end
@@ -94,26 +108,12 @@ function SetupDrawPositions()
 end
 
 function DrawCard(x, y, card)
-	love.graphics.setColor(1, 1, 1, 1)
-	love.graphics.rectangle("fill", x, y, CARD_DIMENSIONS.x * Scale, CARD_DIMENSIONS.y * Scale)
-	love.graphics.setColor(0.2, 0.2, 0.2, 1)
-	love.graphics.rectangle("line", x, y, CARD_DIMENSIONS.x * Scale, CARD_DIMENSIONS.y * Scale)
-
-	local TextColor = { 1, 0, 0, 1 }
-	if card:sub(1, 1) == "C" or card:sub(1, 1) == "S" then
-		TextColor = { 0, 0, 0, 1 }
-	end
-
-	local textH = Font:getHeight(card)
-	local textW = Font:getWidth(card)
-
-	love.graphics.setColor(unpack(TextColor))
-	love.graphics.print(
-		card,
-		Font,
-		x + (CARD_DIMENSIONS.x / 2) - (textW / 2),
-		y + (CARD_DIMENSIONS.y / 2) - (textH / 2)
-	)
+	local path = "Sprites/" .. SUIT_EXPANSIONS[card:sub(1, 1)] .. "/" .. card .. ".png"
+	local cardSprite = love.graphics.newImage(path)
+	love.graphics.push()
+	love.graphics.scale(CardSpriteScale.x, CardSpriteScale.y)
+	love.graphics.draw(cardSprite, x / CardSpriteScale.x, y / CardSpriteScale.y)
+	love.graphics.pop()
 end
 
 function DrawTableu(tableu)
