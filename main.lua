@@ -8,12 +8,22 @@ CARD_SPRITE_DIMENSIONS = { x = 27, y = 34 }
 
 SUIT_EXPANSIONS = { C = "Clubs", S = "Spades", H = "Hearts", D = "Diamonds" }
 
+MAX_SCALE = 1
+
 Scale = 1
 
 CardSpriteScale = {
 	x = CARD_DIMENSIONS.x / CARD_SPRITE_DIMENSIONS.x * Scale,
 	y = CARD_DIMENSIONS.y / CARD_SPRITE_DIMENSIONS.y * Scale,
 }
+
+function math.Clamp(val, lower, upper)
+	assert(val and lower and upper, "not very useful error message here")
+	if lower > upper then
+		lower, upper = upper, lower
+	end -- swap if boundaries supplied the wrong way
+	return math.max(lower, math.min(upper, val))
+end
 
 function Shuffle(tbl)
 	math.randomseed(os.time())
@@ -82,11 +92,8 @@ function SetupDrawPositions()
 
 	local abs_width = (2 * MARGIN) + (7 * CARD_DIMENSIONS.x) + (6 * CARD_GAP.x)
 	local abs_height = (2 * MARGIN) + (4 * CARD_GAP.y) + CARD_DIMENSIONS.y + MARGIN + CARD_DIMENSIONS.y
-	if abs_width > Ww or abs_height > Wh then
-		Scale = math.min(Ww / abs_width, Wh / abs_height)
-	else
-		Scale = 1
-	end
+
+	Scale = math.Clamp(math.min(Ww / abs_width, Wh / abs_height), 0, MAX_SCALE)
 
 	DrawPositions = {}
 	for i = 1, 7 do
