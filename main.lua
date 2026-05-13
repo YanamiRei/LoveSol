@@ -7,6 +7,7 @@ CARD_GAP = { x = 30, y = 40 }
 CARD_SPRITE_DIMENSIONS = { x = 27, y = 34 }
 
 MAX_SCALE = 1
+BG_SCALE = 4
 
 Scale = 1
 
@@ -63,8 +64,8 @@ end
 function love.load()
 	Font = love.graphics.newFont(16)
 	love.graphics.setDefaultFilter("nearest", "nearest")
-
 	CardSprites = {}
+
 	local suits = { C = "Clubs", S = "Spades", H = "Hearts", D = "Diamonds" }
 	for abbr, name in pairs(suits) do
 		for i = 1, 13 do
@@ -81,6 +82,10 @@ function love.load()
 
 	SetupDrawPositions()
 	TopCardsPosition = GetTopCardsPosition()
+
+	CardSprites.background = love.graphics.newImage("Sprites/table.png")
+	CardSprites.background:setWrap("repeat", "repeat")
+	BackgroundQuad = love.graphics.newQuad(0, 0, Ww / BG_SCALE, Wh / BG_SCALE, CardSprites.background:getDimensions())
 end
 
 function love.update()
@@ -149,6 +154,7 @@ function GetTopCardsPosition()
 end
 
 function love.draw()
+	love.graphics.draw(CardSprites.background, BackgroundQuad, 0, 0, 0, BG_SCALE, BG_SCALE)
 	DrawTableu()
 	DrawBottom()
 end
@@ -160,6 +166,7 @@ function love.resize()
 	}
 	SetupDrawPositions()
 	TopCardsPosition = GetTopCardsPosition()
+	BackgroundQuad = love.graphics.newQuad(0, 0, Ww / BG_SCALE, Wh / BG_SCALE, CardSprites.background:getDimensions())
 end
 
 function SetupDrawPositions()
@@ -225,7 +232,7 @@ function DrawBottom()
 	-- Foundation
 	local y = DrawPositions.Foundation.y
 	for i, card in ipairs(Foundation) do
-		local x = DrawPositions.Foundation.x + ((i - 1) * CARD_GAP.x)
+		local x = DrawPositions.Foundation.x + ((i - 1) * CARD_GAP.x * Scale)
 		DrawCard(x, y, card)
 	end
 end
