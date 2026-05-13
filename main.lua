@@ -7,11 +7,11 @@ CARD_GAP = { x = 20, y = 10 }
 Scale = 1
 
 function Shuffle(tbl)
+	math.randomseed(os.time())
 	for i = #tbl, 2, -1 do
 		local j = math.random(i)
 		tbl[i], tbl[j] = tbl[j], tbl[i]
 	end
-	return tbl
 end
 
 function GenrateDeck()
@@ -45,6 +45,8 @@ function DistributeDeck(deck)
 end
 
 function love.load()
+	Font = love.graphics.newFont(16)
+
 	Deck = GenrateDeck()
 	Tableu = DistributeDeck(Deck)
 
@@ -53,7 +55,9 @@ end
 
 function love.update() end
 
-function love.draw() end
+function love.draw()
+	DrawTableu(Tableu)
+end
 
 function love.resize()
 	SetupDrawPositions()
@@ -86,5 +90,38 @@ function SetupDrawPositions()
 
 	DrawPositions.stock = { x = MARGIN * Scale, y = Wh - ((CARD_DIMENSIONS.y + MARGIN) * Scale) }
 	DrawPositions.Foundation =
-		{ x = (MARGIN + CARD_DIMENSIONS.x + CARD_GAP) * Scale, y = Wh - ((CARD_DIMENSIONS.y + MARGIN) * Scale) }
+		{ x = (MARGIN + CARD_DIMENSIONS.x + CARD_GAP.x) * Scale, y = Wh - ((CARD_DIMENSIONS.y + MARGIN) * Scale) }
+end
+
+function DrawCard(x, y, card)
+	love.graphics.setColor(1, 1, 1, 1)
+	love.graphics.rectangle("fill", x, y, CARD_DIMENSIONS.x * Scale, CARD_DIMENSIONS.y * Scale)
+	love.graphics.setColor(0.2, 0.2, 0.2, 1)
+	love.graphics.rectangle("line", x, y, CARD_DIMENSIONS.x * Scale, CARD_DIMENSIONS.y * Scale)
+
+	local TextColor = { 1, 0, 0, 1 }
+	if card:sub(1, 1) == "C" or card:sub(1, 1) == "S" then
+		TextColor = { 0, 0, 0, 1 }
+	end
+
+	local textH = Font:getHeight(card)
+	local textW = Font:getWidth(card)
+
+	love.graphics.setColor(unpack(TextColor))
+	love.graphics.print(
+		card,
+		Font,
+		x + (CARD_DIMENSIONS.x / 2) - (textW / 2),
+		y + (CARD_DIMENSIONS.y / 2) - (textH / 2)
+	)
+end
+
+function DrawTableu(tableu)
+	for i = 1, 5 do
+		for j = 1, 7 do
+			local card = tableu[j][i]
+			local posn = DrawPositions[j][i]
+			DrawCard(posn.x, posn.y, card)
+		end
+	end
 end
