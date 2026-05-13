@@ -96,7 +96,7 @@ function Click(x, y)
 			if i == 8 then
 				DrawFromStock()
 			else
-				TryColumn(i)
+				TryCard(i)
 			end
 		end
 	end
@@ -109,7 +109,14 @@ function DrawFromStock()
 	table.insert(Foundation, table.remove(Deck))
 end
 
-function TryColumn(columnNo) end
+function TryCard(columnNo)
+	local card = Tableu[columnNo][#Tableu[columnNo]]
+	local cardValue = tonumber(card:sub(2, 3))
+	local topFoundationCardValue = tonumber(Foundation[#Foundation]:sub(2, 3))
+	if math.abs(topFoundationCardValue - cardValue) == 1 then
+		table.insert(Foundation, table.remove(Tableu[columnNo]))
+	end
+end
 
 function GetTopCardsPosition()
 	local topCardsPosition = {}
@@ -162,6 +169,9 @@ function SetupDrawPositions()
 end
 
 function DrawCard(x, y, card)
+	if not card then
+		return
+	end
 	local path = "Sprites/" .. SUIT_EXPANSIONS[card:sub(1, 1)] .. "/" .. card .. ".png"
 	local cardSprite = love.graphics.newImage(path)
 	love.graphics.push()
