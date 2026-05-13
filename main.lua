@@ -115,6 +115,7 @@ function TryCard(columnNo)
 	local topFoundationCardValue = tonumber(Foundation[#Foundation]:sub(2, 3))
 	if math.abs(topFoundationCardValue - cardValue) == 1 then
 		table.insert(Foundation, table.remove(Tableu[columnNo]))
+		TopCardsPosition = GetTopCardsPosition()
 	end
 end
 
