@@ -6,8 +6,6 @@ CARD_GAP = { x = 30, y = 40 }
 
 CARD_SPRITE_DIMENSIONS = { x = 27, y = 34 }
 
-SUIT_EXPANSIONS = { C = "Clubs", S = "Spades", H = "Hearts", D = "Diamonds" }
-
 MAX_SCALE = 1
 
 Scale = 1
@@ -18,10 +16,9 @@ CardSpriteScale = {
 }
 
 function math.Clamp(val, lower, upper)
-	assert(val and lower and upper, "not very useful error message here")
 	if lower > upper then
 		lower, upper = upper, lower
-	end -- swap if boundaries supplied the wrong way
+	end
 	return math.max(lower, math.min(upper, val))
 end
 
@@ -67,6 +64,17 @@ function love.load()
 	Font = love.graphics.newFont(16)
 	love.graphics.setDefaultFilter("nearest", "nearest")
 
+	CardSprites = {}
+	local suits = { C = "Clubs", S = "Spades", H = "Hearts", D = "Diamonds" }
+	for abbr, name in pairs(suits) do
+		for i = 1, 13 do
+			local card = abbr .. i
+			CardSprites[card] = love.graphics.newImage("Sprites/" .. name .. "/" .. card .. ".png")
+		end
+	end
+	CardSprites.back0 = love.graphics.newImage("Sprites/Backs/back_0.png")
+	CardSprites.backX = love.graphics.newImage("Sprites/Backs/back_x.png")
+
 	Deck = GenrateDeck()
 	Tableu = DistributeDeck(Deck)
 	Foundation = { table.remove(Deck) }
@@ -86,6 +94,9 @@ end
 
 function Click(x, y)
 	for i, posn in ipairs(TopCardsPosition) do
+		if not posn.x then
+			goto continue
+		end
 		if
 			x > posn.x
 			and y > posn.y
@@ -99,6 +110,7 @@ function Click(x, y)
 				TryCard(i)
 			end
 		end
+		::continue::
 	end
 end
 
@@ -111,6 +123,9 @@ end
 
 function TryCard(columnNo)
 	local card = Tableu[columnNo][#Tableu[columnNo]]
+	if not card then
+		return
+	end
 	local cardValue = tonumber(card:sub(2, 3))
 	local topFoundationCardValue = tonumber(Foundation[#Foundation]:sub(2, 3))
 	if math.abs(topFoundationCardValue - cardValue) == 1 then
@@ -122,15 +137,20 @@ end
 function GetTopCardsPosition()
 	local topCardsPosition = {}
 	for i = 1, 7 do
+		if #Tableu[i] == 0 then
+			table.insert(topCardsPosition, {})
+			goto continue
+		end
 		table.insert(topCardsPosition, DrawPositions[i][#Tableu[i]])
+		::continue::
 	end
 	table.insert(topCardsPosition, DrawPositions["Stock"])
 	return topCardsPosition
 end
 
 function love.draw()
-	DrawTableu(Tableu)
-	DrawBottom(Foundation)
+	DrawTableu()
+	DrawBottom()
 end
 
 function love.resize()
@@ -173,28 +193,26 @@ function DrawCard(x, y, card)
 	if not card then
 		return
 	end
-	local path = "Sprites/" .. SUIT_EXPANSIONS[card:sub(1, 1)] .. "/" .. card .. ".png"
-	local cardSprite = love.graphics.newImage(path)
+	local sprite = CardSprites[card]
 	love.graphics.push()
 	love.graphics.scale(CardSpriteScale.x, CardSpriteScale.y)
-	love.graphics.draw(cardSprite, x / CardSpriteScale.x, y / CardSpriteScale.y)
+	love.graphics.draw(sprite, x / CardSpriteScale.x, y / CardSpriteScale.y)
 	love.graphics.pop()
 end
 
-function DrawTableu(tableu)
+function DrawTableu()
 	for i = 1, 5 do
 		for j = 1, 7 do
-			local card = tableu[j][i]
+			local card = Tableu[j][i]
 			local posn = DrawPositions[j][i]
 			DrawCard(posn.x, posn.y, card)
 		end
 	end
 end
 
-function DrawBottom(foundation)
+function DrawBottom()
 	-- Stock
-	local StockPath = #Deck ~= 0 and "Sprites/Backs/back_0.png" or "Sprites/Backs/back_x.png"
-	local cardBackSprite = love.graphics.newImage(StockPath)
+	local cardBackSprite = #Deck ~= 0 and CardSprites.back0 or CardSprites.backX
 	love.graphics.push()
 	love.graphics.scale(CardSpriteScale.x, CardSpriteScale.y)
 	love.graphics.draw(
