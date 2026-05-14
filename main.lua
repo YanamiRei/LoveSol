@@ -60,7 +60,17 @@ function DistributeDeck(deck)
 	return tableu
 end
 
+function NewGame()
+	GameStatus = 0
+	Deck = GenrateDeck()
+	Tableu = DistributeDeck(Deck)
+	Foundation = { table.remove(Deck) }
+	Timeline = {}
+	TopCardsPosition = GetTopCardsPosition()
+end
+
 function love.load()
+	GameStatus = 0
 	DialogOpen = false
 	LoadFont()
 	love.graphics.setDefaultFilter("nearest", "nearest")
@@ -157,6 +167,7 @@ function DrawFromStock()
 	end
 	table.insert(Foundation, table.remove(Deck))
 	table.insert(Timeline, 0)
+	ValidateGame()
 end
 
 function TryCard(columnNo)
@@ -170,6 +181,7 @@ function TryCard(columnNo)
 		table.insert(Foundation, table.remove(Tableu[columnNo]))
 		TopCardsPosition = GetTopCardsPosition()
 		table.insert(Timeline, columnNo)
+		ValidateGame()
 	end
 end
 
@@ -188,13 +200,63 @@ function GetTopCardsPosition()
 	return topCardsPosition
 end
 
+function CheckGameStatus()
+	local isTableuEmpty = true
+	for i = 1, 7 do
+		if #Tableu[i] ~= 0 then
+			isTableuEmpty = false
+			break
+		end
+	end
+	if isTableuEmpty then
+		return 1
+	end
+
+	local nonStockMoveExists = false
+	for i = 1, 7 do
+		if not Tableu[i][#Tableu[i]] then
+			goto skip
+		end
+		if math.abs(Foundation[#Foundation]:sub(2) - Tableu[i][#Tableu[i]]:sub(2)) == 1 then
+			nonStockMoveExists = true
+			break
+		end
+		::skip::
+	end
+	if nonStockMoveExists then
+		return 0
+	end
+
+	local stockEmpty = #Deck == 0
+
+	if stockEmpty and not nonStockMoveExists then
+		return -1
+	end
+
+	return 0
+end
+
+function ValidateGame()
+	GameStatus = CheckGameStatus()
+	if GameStatus ~= 0 then
+		DialogOpen = true
+	end
+end
+
 function love.draw()
 	love.graphics.draw(Sprites.background, BackgroundQuad, 0, 0, 0, BG_SCALE, BG_SCALE)
 	DrawTableu()
 	DrawBottom()
+	local message
+	if GameStatus == 1 then
+		message = "You Win!"
+	elseif GameStatus == -1 then
+		message = "No more Valid Moves"
+	end
 	if DialogOpen then
-		DrawDialog("You Lose!", "Play again", function()
+		DrawDialog(message, "Play again", function()
 			DialogOpen = false
+			NewGame()
 		end)
 	end
 end
@@ -264,7 +326,7 @@ end
 
 function DrawBottom()
 	-- Stock
-	local cardBackSprite = #Deck ~= 0 and Sprites.back0 or CardSprites.backX
+	local cardBackSprite = #Deck ~= 0 and Sprites.back0 or Sprites.backX
 	love.graphics.push()
 	love.graphics.scale(PixelPerfectScale, PixelPerfectScale)
 	love.graphics.draw(
@@ -321,7 +383,7 @@ function DrawDialog(text, buttonText, onPressed)
 		y + (2 * MARGIN * Scale)
 	)
 
-	local buttonX = x + (2 * MARGIN * Scale)
+	local buttonX = x + totalWidth / 2 - ((2 * MARGIN * Scale) + Font:getWidth(buttonText)) / 2
 	local buttonY = y + totalHeight - ((MARGIN + (2 * MARGIN)) * Scale) - Font:getHeight(buttonText)
 
 	drawButton(buttonText, buttonX, buttonY, onPressed)
