@@ -75,10 +75,12 @@ function love.load()
 	end
 	CardSprites.back0 = love.graphics.newImage("Sprites/Backs/back_0.png")
 	CardSprites.backX = love.graphics.newImage("Sprites/Backs/back_x.png")
+	CardSprites.undo = love.graphics.newImage("Sprites/undo.png")
 
 	Deck = GenrateDeck()
 	Tableu = DistributeDeck(Deck)
 	Foundation = { table.remove(Deck) }
+	Timeline = {}
 
 	SetupDrawPositions()
 	TopCardsPosition = GetTopCardsPosition()
@@ -108,9 +110,10 @@ function Click(x, y)
 			and x < posn.x + (CARD_DIMENSIONS.x * Scale)
 			and y < posn.y + (CARD_DIMENSIONS.y * Scale)
 		then
-			print("clicking at " .. i)
 			if i == 8 then
 				DrawFromStock()
+			elseif i == 9 then
+				Undo()
 			else
 				TryCard(i)
 			end
@@ -119,11 +122,24 @@ function Click(x, y)
 	end
 end
 
+function Undo()
+	if #Timeline == 0 then
+		return
+	end
+	local toMoveto = table.remove(Timeline)
+	if toMoveto == 0 then
+		table.insert(Deck, table.remove(Foundation))
+	else
+		table.insert(Tableu[toMoveto], table.remove(Foundation))
+	end
+end
+
 function DrawFromStock()
 	if #Deck == 0 then
 		return
 	end
 	table.insert(Foundation, table.remove(Deck))
+	table.insert(Timeline, 0)
 end
 
 function TryCard(columnNo)
@@ -136,6 +152,7 @@ function TryCard(columnNo)
 	if math.abs(topFoundationCardValue - cardValue) == 1 then
 		table.insert(Foundation, table.remove(Tableu[columnNo]))
 		TopCardsPosition = GetTopCardsPosition()
+		table.insert(Timeline, columnNo)
 	end
 end
 
@@ -150,6 +167,7 @@ function GetTopCardsPosition()
 		::continue::
 	end
 	table.insert(topCardsPosition, DrawPositions["Stock"])
+	table.insert(topCardsPosition, DrawPositions["Undo"])
 	return topCardsPosition
 end
 
@@ -173,7 +191,13 @@ function SetupDrawPositions()
 	Ww, Wh = love.graphics.getDimensions()
 
 	local abs_width = (2 * MARGIN) + (7 * CARD_DIMENSIONS.x) + (6 * CARD_GAP.x)
-	local abs_height = (2 * MARGIN) + (4 * CARD_GAP.y) + CARD_DIMENSIONS.y + MARGIN + CARD_DIMENSIONS.y
+	local abs_height = (2 * MARGIN)
+		+ (4 * CARD_GAP.y)
+		+ CARD_DIMENSIONS.y
+		+ MARGIN
+		+ CARD_DIMENSIONS.y
+		+ MARGIN
+		+ CARD_DIMENSIONS.y
 
 	Scale = math.Clamp(math.min(Ww / abs_width, Wh / abs_height), 0, MAX_SCALE)
 
@@ -192,6 +216,7 @@ function SetupDrawPositions()
 	end
 
 	DrawPositions.Stock = { x = MARGIN * Scale, y = Wh - ((CARD_DIMENSIONS.y + MARGIN) * Scale) }
+	DrawPositions.Undo = { x = MARGIN * Scale, y = Wh - 2 * ((CARD_DIMENSIONS.y + MARGIN) * Scale) }
 	DrawPositions.Foundation =
 		{ x = (MARGIN + CARD_DIMENSIONS.x + CARD_GAP.x) * Scale, y = Wh - ((CARD_DIMENSIONS.y + MARGIN) * Scale) }
 end
@@ -226,6 +251,17 @@ function DrawBottom()
 		cardBackSprite,
 		DrawPositions.Stock.x / CardSpriteScale.x,
 		DrawPositions.Stock.y / CardSpriteScale.y
+	)
+	love.graphics.pop()
+
+	-- Undo
+	local cardBackSprite = CardSprites.undo
+	love.graphics.push()
+	love.graphics.scale(CardSpriteScale.x, CardSpriteScale.y)
+	love.graphics.draw(
+		cardBackSprite,
+		DrawPositions.Undo.x / CardSpriteScale.x,
+		DrawPositions.Undo.y / CardSpriteScale.y
 	)
 	love.graphics.pop()
 
