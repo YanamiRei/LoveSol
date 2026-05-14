@@ -172,7 +172,32 @@ function Undo()
 	end
 	local toMoveto = table.remove(Timeline)
 	if toMoveto == 0 then
-		table.insert(Deck, table.remove(Foundation))
+		--table.insert(Deck, table.remove(Foundation))
+		local card = table.remove(Foundation)
+		local initialPos = {
+			x = DrawPositions.Foundation.x + #Foundation * CARD_GAP.x * Scale / 2,
+			y = DrawPositions.Foundation.y,
+		}
+		local finalPos = { x = DrawPositions.Stock.x, y = DrawPositions.Stock.y }
+		MovingCards[card] = { x = initialPos.x, y = initialPos.y, scaleX = 1, faceDown = false }
+		-- slide
+		flux.to(MovingCards[card], ANIMATION_SPEED, finalPos):ease("quadout"):oncomplete(function()
+			table.insert(Deck, card)
+			MovingCards[card] = nil
+			ValidateGame()
+		end)
+
+		-- fake flipping
+		flux.to(MovingCards[card], ANIMATION_SPEED * 0.25, { scaleX = 0 })
+			:delay(0.1)
+			:ease("quadout")
+			:oncomplete(function()
+				if MovingCards[card] then
+					MovingCards[card].faceDown = true
+					flux.to(MovingCards[card], ANIMATION_SPEED * 0.25, { scaleX = 1 }):ease("quadin")
+				end
+			end)
+
 		TopCardsPosition = GetTopCardsPosition()
 		ValidateGame()
 	else
@@ -196,9 +221,29 @@ function DrawFromStock()
 	if #Deck == 0 then
 		return
 	end
-	table.insert(Foundation, table.remove(Deck))
-	table.insert(Timeline, 0)
-	ValidateGame()
+	local card = table.remove(Deck)
+	local initialPos = { x = DrawPositions.Stock.x, y = DrawPositions.Stock.y }
+	local finalPos = {
+		x = DrawPositions.Foundation.x + #Foundation * CARD_GAP.x * Scale / 2,
+		y = DrawPositions.Foundation.y,
+	}
+
+	MovingCards[card] = { x = initialPos.x, y = initialPos.y, scaleX = 1, faceDown = true }
+	-- slide
+	flux.to(MovingCards[card], ANIMATION_SPEED, finalPos):ease("quadout"):oncomplete(function()
+		table.insert(Foundation, card)
+		MovingCards[card] = nil
+		table.insert(Timeline, 0)
+		ValidateGame()
+	end)
+
+	-- fake flipping
+	flux.to(MovingCards[card], ANIMATION_SPEED * 0.25, { scaleX = 0 }):ease("quadout"):oncomplete(function()
+		if MovingCards[card] then
+			MovingCards[card].faceDown = false
+			flux.to(MovingCards[card], ANIMATION_SPEED * 0.25, { scaleX = 1 }):ease("quadin")
+		end
+	end)
 end
 
 function TryCard(columnNo)
@@ -287,7 +332,7 @@ function love.draw()
 	DrawTableu()
 	DrawBottom()
 	DrawMovingCards()
-	local message
+	local message = "..."
 	if GameStatus == 1 then
 		message = "You Win!"
 	elseif GameStatus == -1 then
@@ -343,20 +388,27 @@ function SetupDrawPositions()
 		{ x = (MARGIN + CARD_DIMENSIONS.x + CARD_GAP.x) * Scale, y = Wh - ((CARD_DIMENSIONS.y + MARGIN) * Scale) }
 end
 
-function DrawCard(x, y, card)
-	if not card then
+function DrawCard(x, y, spriteName, scaleX)
+	if not spriteName then
 		return
 	end
-	local sprite = Sprites[card]
+	if not scaleX then
+		scaleX = 1
+	end
+	local sprite = Sprites[spriteName]
 	love.graphics.push()
-	love.graphics.scale(PixelPerfectScale, PixelPerfectScale)
-	love.graphics.draw(sprite, x / PixelPerfectScale, y / PixelPerfectScale)
+	love.graphics.translate(x + (CARD_DIMENSIONS.x * Scale * (1 - scaleX)) / 2, y)
+	love.graphics.scale(PixelPerfectScale * scaleX, PixelPerfectScale)
+	love.graphics.draw(sprite, 0, 0)
 	love.graphics.pop()
 end
 
 function DrawMovingCards()
-	for card, posn in pairs(MovingCards) do
-		DrawCard(posn.x, posn.y, card)
+	for card, state in pairs(MovingCards) do
+		if state.faceDown then
+			card = "back0"
+		end
+		DrawCard(state.x, state.y, card, state.scaleX)
 	end
 end
 
@@ -372,22 +424,11 @@ end
 
 function DrawBottom()
 	-- Stock
-	local cardBackSprite = #Deck ~= 0 and Sprites.back0 or Sprites.backX
-	love.graphics.push()
-	love.graphics.scale(PixelPerfectScale, PixelPerfectScale)
-	love.graphics.draw(
-		cardBackSprite,
-		DrawPositions.Stock.x / PixelPerfectScale,
-		DrawPositions.Stock.y / PixelPerfectScale
-	)
-	love.graphics.pop()
+	local cardBackSpriteName = #Deck ~= 0 and "back0" or "backX"
+	DrawCard(DrawPositions.Stock.x, DrawPositions.Stock.y, cardBackSpriteName)
 
 	-- Undo
-	local undoSprite = Sprites.undo
-	love.graphics.push()
-	love.graphics.scale(PixelPerfectScale, PixelPerfectScale)
-	love.graphics.draw(undoSprite, DrawPositions.Undo.x / PixelPerfectScale, DrawPositions.Undo.y / PixelPerfectScale)
-	love.graphics.pop()
+	DrawCard(DrawPositions.Undo.x, DrawPositions.Undo.y, "undo")
 
 	-- Foundation
 	local y = DrawPositions.Foundation.y
