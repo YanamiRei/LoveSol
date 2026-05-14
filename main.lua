@@ -1,5 +1,7 @@
 -- GOLF SOLITAIRE
 
+flux = require("flux")
+
 MARGIN = 40
 CARD_DIMENSIONS = { x = 162, y = 204 }
 CARD_GAP = { x = 30, y = 40 }
@@ -11,6 +13,8 @@ MAX_SCALE = 1
 BG_SCALE = 4
 BASE_FONT_SIZE = 64
 
+ANIMATION_SPEED = 0.5 --seconds
+
 Scale = 1
 
 PixelPerfectScale = CARD_DIMENSIONS.x / CARD_SPRITE_DIMENSIONS.x * Scale
@@ -20,6 +24,15 @@ function math.Clamp(val, lower, upper)
 		lower, upper = upper, lower
 	end
 	return math.max(lower, math.min(upper, val))
+end
+
+function table.contains(tbl, value)
+	for _, v in ipairs(tbl) do
+		if v == value then
+			return true
+		end
+	end
+	return false
 end
 
 function Shuffle(tbl)
@@ -67,6 +80,7 @@ function NewGame()
 	Foundation = { table.remove(Deck) }
 	Timeline = {}
 	TopCardsPosition = GetTopCardsPosition()
+	MovingCards = {}
 end
 
 function love.load()
@@ -102,6 +116,7 @@ function love.load()
 	Tableu = DistributeDeck(Deck)
 	Foundation = { table.remove(Deck) }
 	Timeline = {}
+	MovingCards = {}
 
 	SetupDrawPositions()
 	TopCardsPosition = GetTopCardsPosition()
@@ -118,10 +133,11 @@ function LoadFont()
 	love.graphics.setFont(Font)
 end
 
-function love.update()
+function love.update(dt)
+	flux.update(dt)
 	lastMouseState = currentMouseState
 	currentMouseState = love.mouse.isDown(1)
-	if lastMouseState and not currentMouseState and not DialogOpen then
+	if not lastMouseState and currentMouseState and not DialogOpen then
 		local mx, my = love.mouse.getPosition()
 		Click(mx, my)
 	end
@@ -157,11 +173,23 @@ function Undo()
 	local toMoveto = table.remove(Timeline)
 	if toMoveto == 0 then
 		table.insert(Deck, table.remove(Foundation))
+		TopCardsPosition = GetTopCardsPosition()
+		ValidateGame()
 	else
-		table.insert(Tableu[toMoveto], table.remove(Foundation))
+		local initialPos = {
+			x = DrawPositions.Foundation.x + (#Foundation - 1) * CARD_GAP.x * Scale / 2,
+			y = DrawPositions.Foundation.y,
+		}
+		local card = table.remove(Foundation)
+		local finalPos = DrawPositions[toMoveto][#Tableu[toMoveto] + 1]
+		MovingCards[card] = { x = initialPos.x, y = initialPos.y }
+		flux.to(MovingCards[card], ANIMATION_SPEED, finalPos):oncomplete(function()
+			table.insert(Tableu[toMoveto], card)
+			MovingCards[card] = nil
+			TopCardsPosition = GetTopCardsPosition()
+			ValidateGame()
+		end)
 	end
-	TopCardsPosition = GetTopCardsPosition()
-	ValidateGame()
 end
 
 function DrawFromStock()
@@ -181,10 +209,18 @@ function TryCard(columnNo)
 	local cardValue = tonumber(card:sub(2, 3))
 	local topFoundationCardValue = tonumber(Foundation[#Foundation]:sub(2, 3))
 	if math.abs(topFoundationCardValue - cardValue) == 1 then
-		table.insert(Foundation, table.remove(Tableu[columnNo]))
-		TopCardsPosition = GetTopCardsPosition()
-		table.insert(Timeline, columnNo)
-		ValidateGame()
+		local initialPos = DrawPositions[columnNo][#Tableu[columnNo]]
+		card = table.remove(Tableu[columnNo])
+		local finalPos =
+			{ x = DrawPositions.Foundation.x + #Foundation * CARD_GAP.x * Scale / 2, y = DrawPositions.Foundation.y }
+		MovingCards[card] = { x = initialPos.x, y = initialPos.y }
+		flux.to(MovingCards[card], ANIMATION_SPEED, finalPos):oncomplete(function()
+			table.insert(Foundation, card)
+			MovingCards[card] = nil
+			table.insert(Timeline, columnNo)
+			TopCardsPosition = GetTopCardsPosition()
+			ValidateGame()
+		end)
 	end
 end
 
@@ -250,6 +286,7 @@ function love.draw()
 	love.graphics.draw(Sprites.background, BackgroundQuad, 0, 0, 0, BG_SCALE, BG_SCALE)
 	DrawTableu()
 	DrawBottom()
+	DrawMovingCards()
 	local message
 	if GameStatus == 1 then
 		message = "You Win!"
@@ -317,6 +354,12 @@ function DrawCard(x, y, card)
 	love.graphics.pop()
 end
 
+function DrawMovingCards()
+	for card, posn in pairs(MovingCards) do
+		DrawCard(posn.x, posn.y, card)
+	end
+end
+
 function DrawTableu()
 	for i = 1, 5 do
 		for j = 1, 7 do
@@ -349,7 +392,7 @@ function DrawBottom()
 	-- Foundation
 	local y = DrawPositions.Foundation.y
 	for i, card in ipairs(Foundation) do
-		local x = DrawPositions.Foundation.x + ((i - 1) * CARD_GAP.x * Scale)
+		local x = DrawPositions.Foundation.x + ((i - 1) * CARD_GAP.x / 2 * Scale)
 		DrawCard(x, y, card)
 	end
 end
