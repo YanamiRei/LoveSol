@@ -72,7 +72,6 @@ end
 function love.load()
 	GameStatus = 0
 	DialogOpen = false
-	LoadFont()
 	love.graphics.setDefaultFilter("nearest", "nearest")
 	Sprites = {}
 
@@ -110,6 +109,8 @@ function love.load()
 	Sprites.background = love.graphics.newImage("Sprites/table.png")
 	Sprites.background:setWrap("repeat", "repeat")
 	BackgroundQuad = love.graphics.newQuad(0, 0, Ww / BG_SCALE, Wh / BG_SCALE, Sprites.background:getDimensions())
+
+	LoadFont()
 end
 
 function LoadFont()
@@ -159,6 +160,8 @@ function Undo()
 	else
 		table.insert(Tableu[toMoveto], table.remove(Foundation))
 	end
+	TopCardsPosition = GetTopCardsPosition()
+	ValidateGame()
 end
 
 function DrawFromStock()
@@ -337,14 +340,10 @@ function DrawBottom()
 	love.graphics.pop()
 
 	-- Undo
-	local cardBackSprite = Sprites.undo
+	local undoSprite = Sprites.undo
 	love.graphics.push()
 	love.graphics.scale(PixelPerfectScale, PixelPerfectScale)
-	love.graphics.draw(
-		cardBackSprite,
-		DrawPositions.Undo.x / PixelPerfectScale,
-		DrawPositions.Undo.y / PixelPerfectScale
-	)
+	love.graphics.draw(undoSprite, DrawPositions.Undo.x / PixelPerfectScale, DrawPositions.Undo.y / PixelPerfectScale)
 	love.graphics.pop()
 
 	-- Foundation
